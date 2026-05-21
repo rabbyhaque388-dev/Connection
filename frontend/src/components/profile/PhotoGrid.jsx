@@ -15,7 +15,7 @@ const PhotoGrid = ({ photos = [], uploading = false, onUpload, onDelete, maxPhot
   const canUpload = photos.length < maxPhotos;
 
   const resolveUrl = (url) =>
-    url?.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+    url?.startsWith('/uploads') ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${url}` : url;
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];

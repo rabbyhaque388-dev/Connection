@@ -38,7 +38,7 @@ const SwipeCard = ({ profile, onSwipe }) => {
   const getPhotoUrl = (photos) => {
     if (photos && photos.length > 0) {
       const url = photos[0].url;
-      return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+      return url.startsWith('/uploads') ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${url}` : url;
     }
     return `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80`;
   };

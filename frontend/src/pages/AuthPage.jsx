@@ -102,7 +102,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-950 px-4 py-8 relative overflow-hidden font-sans">
+    <div className="min-h-screen w-screen flex items-center justify-center bg-slate-950 px-4 py-8 relative overflow-y-auto font-sans">
       {/* Decorative premium glass background nodes */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500/10 rounded-full filter blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full filter blur-[100px] pointer-events-none"></div>

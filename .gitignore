@@ -37,3 +37,8 @@ Thumbs.db
 # User uploads
 backend/uploads/
 
+# Temporary npm Cache
+.npm-cache/
+.npm-tmp/
+
+

@@ -215,7 +215,7 @@ const ChatPage = () => {
   const getPartnerPhoto = (partnerObj) => {
     if (partnerObj?.photos && partnerObj.photos.length > 0) {
       const url = partnerObj.photos[0].url;
-      return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+      return url.startsWith('/uploads') ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${url}` : url;
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerObj?.name || 'User')}&background=fe3c72&color=fff&bold=true`;
   };

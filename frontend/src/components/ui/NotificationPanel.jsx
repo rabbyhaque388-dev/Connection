@@ -119,7 +119,7 @@ const NotificationPanel = ({ isOpen, onToggle }) => {
                     <img
                       src={
                         notif.sender?.photos?.[0]?.url?.startsWith('/uploads')
-                          ? `http://localhost:5000${notif.sender.photos[0].url}`
+                          ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${notif.sender.photos[0].url}`
                           : notif.sender?.photos?.[0]?.url ||
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
                               notif.sender?.name || 'U'

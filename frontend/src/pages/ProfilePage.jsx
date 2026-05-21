@@ -198,7 +198,7 @@ const ProfilePage = () => {
 
   const renderPhoto = (photoObj) => {
     const url = photoObj.url;
-    return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+    return url.startsWith('/uploads') ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${url}` : url;
   };
 
   return (

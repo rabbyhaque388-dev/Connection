@@ -14,7 +14,7 @@ const MessageBubble = ({ message, isMine }) => {
 
   const imageUrl = message.image
     ? message.image.startsWith('/uploads')
-      ? `http://localhost:5000${message.image}`
+      ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${message.image}`
       : message.image
     : null;
 

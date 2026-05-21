@@ -26,7 +26,7 @@ const Shell = ({ children }) => {
       const photoUrl = user.photos[0].url;
       // Serve local fallback if relative uploader URL
       return photoUrl.startsWith('/uploads') 
-        ? `http://localhost:5000${photoUrl}` 
+        ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${photoUrl}` 
         : photoUrl;
     }
     // Elegant fallback SVG avatar

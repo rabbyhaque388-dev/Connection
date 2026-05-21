@@ -13,7 +13,7 @@ const MatchModal = ({ isOpen, matchDetails, onClose, onSendMessage }) => {
     if (userObj?.photos && userObj.photos.length > 0) {
       const photoUrl = userObj.photos[0].url;
       return photoUrl.startsWith('/uploads') 
-        ? `http://localhost:5000${photoUrl}` 
+        ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${photoUrl}` 
         : photoUrl;
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(userObj?.name || 'User')}&background=fe3c72&color=fff&bold=true`;

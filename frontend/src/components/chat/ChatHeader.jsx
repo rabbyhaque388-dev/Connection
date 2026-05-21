@@ -28,7 +28,7 @@ const ChatHeader = ({ partner, isOnline, onBack, onUnmatch }) => {
   const getPartnerPhoto = () => {
     if (partner?.photos && partner.photos.length > 0) {
       const url = partner.photos[0].url;
-      return url.startsWith('/uploads') ? `http://localhost:5000${url}` : url;
+      return url.startsWith('/uploads') ? `${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}${url}` : url;
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       partner?.name || 'User'
