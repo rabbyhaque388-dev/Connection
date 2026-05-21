@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import seedDatabase from './seeder.js';
 
 let mongoServer = null;
@@ -24,6 +23,7 @@ const connectDB = async () => {
         console.log(`Starting dynamic, secure in-memory MongoDB server fallback...`);
         
         // Spin up MongoMemoryServer
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
         mongoServer = await MongoMemoryServer.create({
           instance: {
             launchTimeoutMS: 60000
@@ -51,6 +51,7 @@ const connectDB = async () => {
         console.log(`Starting dynamic, secure in-memory MongoDB server fallback...`);
         
         // Spin up MongoMemoryServer
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
         mongoServer = await MongoMemoryServer.create({
           instance: {
             launchTimeoutMS: 60000
