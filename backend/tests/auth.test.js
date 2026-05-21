@@ -13,7 +13,11 @@ beforeAll(async () => {
   process.env.JWT_REFRESH_SECRET = 'testjwtsecretrefresh';
 
   // Spin up an isolated MongoDB memory server for integration testing
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryServer.create({
+    instance: {
+      launchTimeoutMS: 60000
+    }
+  });
   const uri = mongoServer.getUri();
   
   if (mongoose.connection.readyState !== 0) {

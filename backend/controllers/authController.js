@@ -237,21 +237,35 @@ export const firebaseLogin = async (req, res, next) => {
           email = parsed.email || 'alex@example.com';
           name = parsed.name || email.split('@')[0];
           picture = parsed.picture;
+        } else if (idToken.split('.').length === 3) {
+          // It looks like a real JWT token; decode the payload signature-free
+          const payloadPart = idToken.split('.')[1];
+          // Support standard base64 and base64url padding conversion
+          const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+          const decodedString = Buffer.from(base64, 'base64').toString('utf8');
+          const parsedPayload = JSON.parse(decodedString);
+          
+          email = parsedPayload.email || 'alex@example.com';
+          name = parsedPayload.name || email.split('@')[0];
+          picture = parsedPayload.picture;
         } else {
           email = idToken.includes('@') ? idToken : 'alex@example.com';
           name = email.split('@')[0];
         }
       } catch (e) {
+        console.error('[Firebase Sandbox Error] Failed to decode token:', e.message);
         email = 'alex@example.com';
         name = 'Alex';
       }
     }
 
+    const { name: reqName, age, gender, preference, bio, location, interests } = req.body;
+
     // Find existing user or register them automatically
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Auto-register: generate a secure random password since Google users won't use password login
+      // Auto-register: generate a secure random password since Google/Firebase users won't use password login directly
       const randomPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(randomPassword, salt);
@@ -259,16 +273,16 @@ export const firebaseLogin = async (req, res, next) => {
       user = await User.create({
         email,
         password: hashedPassword,
-        name: name || email.split('@')[0],
-        age: 18,
-        gender: 'other',
-        preference: 'both',
-        bio: "Hey! I joined via Google. Let's connect!",
-        interests: ['Socializing'],
+        name: reqName || name || email.split('@')[0],
+        age: age ? parseInt(age, 10) : 18,
+        gender: gender || 'other',
+        preference: preference || 'both',
+        bio: bio || "Hey! I joined via Firebase. Let's connect!",
+        interests: interests || ['Socializing'],
         photos: picture
           ? [{ url: picture }]
-          : [{ url: 'https://placehold.co/600x600/png?text=' + encodeURIComponent(name || 'User') }],
-        location: 'Not specified'
+          : [{ url: 'https://placehold.co/600x600/png?text=' + encodeURIComponent(reqName || name || 'User') }],
+        location: location || 'Not specified'
       });
     }
 

@@ -9,6 +9,7 @@ import AuthPage from '../pages/AuthPage';
 import SwipePage from '../pages/SwipePage';
 import ChatPage from '../pages/ChatPage';
 import ProfilePage from '../pages/ProfilePage';
+import ConfirmEmailLogin from '../pages/ConfirmEmailLogin';
 
 // 1. Private Route Guard to redirect anonymous users
 const PrivateRoute = ({ children }) => {
@@ -78,6 +79,9 @@ const AppRoutes = () => {
           </PublicRoute>
         }
       />
+
+      {/* Firebase Email Link landing page */}
+      <Route path="/confirm-email-login" element={<ConfirmEmailLogin />} />
 
       {/* Wildcard Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

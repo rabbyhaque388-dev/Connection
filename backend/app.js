@@ -13,6 +13,7 @@ import userRoutes from './routes/userRoutes.js';
 import swipeRoutes from './routes/swipeRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Error Middleware imports
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
@@ -55,10 +56,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(sanitizeInput);
 
-// 4. Rate Limiter for general APIs
+// 4. Rate Limiters
+// General API limiter
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 requests per window
+  max: 300,
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes'
@@ -67,6 +69,19 @@ const generalLimiter = rateLimit({
   legacyHeaders: false
 });
 app.use('/api/', generalLimiter);
+
+// Stricter limiter for auth routes (brute-force protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // only 20 login/register attempts per 15 min
+  message: {
+    success: false,
+    message: 'Too many authentication attempts, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/auth', authLimiter);
 
 // 5. Static uploads directory mounting (for local image fallback)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -77,6 +92,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/swipes', swipeRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/messages', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Root testing API endpoint
 app.get('/', (req, res) => {

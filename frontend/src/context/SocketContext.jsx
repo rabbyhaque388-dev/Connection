@@ -71,4 +71,3 @@ export const useSocket = () => {
   }
   return context;
 };
-export default SocketContext;

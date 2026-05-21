@@ -24,7 +24,11 @@ const connectDB = async () => {
         console.log(`Starting dynamic, secure in-memory MongoDB server fallback...`);
         
         // Spin up MongoMemoryServer
-        mongoServer = await MongoMemoryServer.create();
+        mongoServer = await MongoMemoryServer.create({
+          instance: {
+            launchTimeoutMS: 60000
+          }
+        });
         const memoryUri = mongoServer.getUri();
         
         conn = await mongoose.connect(memoryUri);
@@ -47,7 +51,11 @@ const connectDB = async () => {
         console.log(`Starting dynamic, secure in-memory MongoDB server fallback...`);
         
         // Spin up MongoMemoryServer
-        mongoServer = await MongoMemoryServer.create();
+        mongoServer = await MongoMemoryServer.create({
+          instance: {
+            launchTimeoutMS: 60000
+          }
+        });
         const memoryUri = mongoServer.getUri();
         
         conn = await mongoose.connect(memoryUri);

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  // Auth modes: 'login', 'register', 'email-link'
+  const [authMode, setAuthMode] = useState('login');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,12 +15,28 @@ const AuthPage = () => {
     bio: '',
     location: ''
   });
+  const [emailLinkSent, setEmailLinkSent] = useState(false);
 
-  const { login, register, loginWithGoogle, error: authError, setError: setAuthError } = useAuth();
+  const {
+    login,
+    register,
+    loginWithGoogle,
+    registerWithFirebaseEmail,
+    loginWithFirebaseEmail,
+    sendFirebaseEmailLink,
+    error: authError,
+    setError: setAuthError
+  } = useAuth();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Clear any stale errors when the auth page mounts
+  useEffect(() => {
+    setAuthError(null);
+  }, []);
+
   const handleGoogleSignIn = async () => {
+    setAuthError(null); // Clear any previous error before attempting
     setLoading(true);
     try {
       const result = await loginWithGoogle();
@@ -36,6 +53,7 @@ const AuthPage = () => {
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (authError) setAuthError(null);
+    if (emailLinkSent) setEmailLinkSent(false);
   };
 
   const handleFormSubmit = async (e) => {
@@ -43,27 +61,44 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const result = await login(formData.email, formData.password);
+      if (authMode === 'login') {
+        // Firebase Email/Password Login
+        const result = await loginWithFirebaseEmail(formData.email, formData.password);
         if (result.success) {
           navigate('/');
         }
-      } else {
-        // Enforce age bounds integer parsing
-        const payload = {
-          ...formData,
-          age: parseInt(formData.age, 10)
+      } else if (authMode === 'register') {
+        // Firebase Email/Password Registration with profile data
+        const profileData = {
+          name: formData.name,
+          age: parseInt(formData.age, 10),
+          gender: formData.gender,
+          preference: formData.preference,
+          bio: formData.bio,
+          location: formData.location
         };
-        const result = await register(payload);
+        const result = await registerWithFirebaseEmail(formData.email, formData.password, profileData);
         if (result.success) {
           navigate('/');
+        }
+      } else if (authMode === 'email-link') {
+        // Firebase Email Link (Passwordless)
+        const result = await sendFirebaseEmailLink(formData.email);
+        if (result.success) {
+          setEmailLinkSent(true);
         }
       }
     } catch (err) {
-      console.error('Form execution error:', err);
+      console.error('Auth error:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchMode = (mode) => {
+    setAuthMode(mode);
+    setAuthError(null);
+    setEmailLinkSent(false);
   };
 
   return (
@@ -89,30 +124,33 @@ const AuthPage = () => {
         </div>
 
         {/* Tab Selection */}
-        <div className="grid grid-cols-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-6">
+        <div className="grid grid-cols-3 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 mb-6">
           <button
             type="button"
-            onClick={() => {
-              setIsLogin(true);
-              setAuthError(null);
-            }}
-            className={`py-3 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
-              isLogin ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            onClick={() => switchMode('login')}
+            className={`py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+              authMode === 'login' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Log In
           </button>
           <button
             type="button"
-            onClick={() => {
-              setIsLogin(false);
-              setAuthError(null);
-            }}
-            className={`py-3 text-sm font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
-              !isLogin ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            onClick={() => switchMode('register')}
+            className={`py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+              authMode === 'register' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             Register
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('email-link')}
+            className={`py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 cursor-pointer ${
+              authMode === 'email-link' ? 'bg-rose-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Magic Link
           </button>
         </div>
 
@@ -126,11 +164,21 @@ const AuthPage = () => {
           </div>
         )}
 
+        {/* Success: Email Link Sent */}
+        {emailLinkSent && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm px-4 py-3.5 rounded-xl mb-6 font-semibold flex items-center gap-3">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Magic link sent to <strong>{formData.email}</strong>! Check your inbox and click the link to log in.</span>
+          </div>
+        )}
+
         {/* Form Container */}
         <form onSubmit={handleFormSubmit} className="space-y-4">
-          {!isLogin && (
+          {/* Registration Form fields */}
+          {authMode === 'register' && (
             <>
-              {/* Registration Form fields */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                   Full Name
@@ -212,6 +260,7 @@ const AuthPage = () => {
             </>
           )}
 
+          {/* Email field — always visible */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Email Address
@@ -223,36 +272,53 @@ const AuthPage = () => {
               placeholder="e.g. john@gmail.com"
               value={formData.email}
               onChange={handleInputChange}
+              onFocus={() => setAuthError(null)}
               className="w-full bg-slate-950 border border-slate-800/80 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 text-sm font-medium transition-colors"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-              Secure Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              required
-              placeholder="At least 6 chars"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full bg-slate-950 border border-slate-800/80 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 text-sm font-medium transition-colors"
-            />
-          </div>
+          {/* Password field — visible for login and register modes only */}
+          {authMode !== 'email-link' && (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Secure Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                required
+                placeholder="At least 6 chars"
+                value={formData.password}
+                onChange={handleInputChange}
+                onFocus={() => setAuthError(null)}
+                className="w-full bg-slate-950 border border-slate-800/80 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 text-sm font-medium transition-colors"
+              />
+            </div>
+          )}
+
+          {/* Email Link mode info text */}
+          {authMode === 'email-link' && !emailLinkSent && (
+            <p className="text-xs text-slate-500 leading-relaxed px-1">
+              We'll send a secure, passwordless magic link to your email.
+              Click the link in your inbox to log in instantly — no password needed!
+            </p>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || emailLinkSent}
             className="w-full mt-4 bg-gradient-to-r from-rose-500 to-orange-500 text-white font-bold py-3.5 rounded-xl transition-all duration-300 hover:brightness-110 active:scale-[0.98] shadow-lg shadow-rose-500/25 flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
           >
             {loading ? (
               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            ) : isLogin ? (
+            ) : authMode === 'login' ? (
               'Enter Connection'
-            ) : (
+            ) : authMode === 'register' ? (
               'Create Match Profile'
+            ) : emailLinkSent ? (
+              '✓ Link Sent — Check Inbox'
+            ) : (
+              'Send Magic Link'
             )}
           </button>
         </form>

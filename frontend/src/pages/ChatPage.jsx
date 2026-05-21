@@ -3,7 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { Send, Image, MoreVertical, X, PhoneCall, Video } from 'lucide-react';
+import { Send, Image, X } from 'lucide-react';
+import ChatHeader from '../components/chat/ChatHeader';
+import MessageBubble from '../components/chat/MessageBubble';
+import TypingIndicator from '../components/chat/TypingIndicator';
 
 const ChatPage = () => {
   const { user: currentUser } = useAuth();
@@ -17,7 +20,6 @@ const ChatPage = () => {
   const [textInput, setTextInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
   const [imageFile, setImageFile] = useState(null);
 
   const messagesEndRef = useRef(null);
@@ -293,126 +295,30 @@ const ChatPage = () => {
       }`}>
         {activeMatch ? (
           <>
-            {/* Active chat header with options */}
-            <div className="h-16 border-b border-slate-800/80 px-6 flex items-center justify-between bg-slate-900/40 backdrop-blur-md z-15">
-              
-              <div className="flex items-center gap-3">
-                {/* Back to index button for mobile */}
-                <button
-                  onClick={() => {
-                    setActiveMatch(null);
-                    navigate('/chat');
-                  }}
-                  className="md:hidden p-1.5 text-slate-400 hover:text-slate-100 mr-1"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                <img
-                  src={getPartnerPhoto(activeMatch.partner)}
-                  alt={activeMatch.partner.name}
-                  className="w-10 h-10 rounded-full object-cover border border-slate-800"
-                />
-                
-                <div className="flex flex-col text-left">
-                  <span className="font-bold text-sm text-slate-100 leading-tight">
-                    {activeMatch.partner.name}
-                  </span>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">
-                    {isPartnerOnline(activeMatch.partner._id) ? 'Online Now' : 'Offline'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action buttons list */}
-              <div className="flex items-center gap-2 relative">
-                <button className="p-2 text-slate-400 hover:text-slate-100 rounded-lg hover:bg-slate-800/50 cursor-pointer">
-                  <PhoneCall className="w-4.5 h-4.5" />
-                </button>
-                <button className="p-2 text-slate-400 hover:text-slate-100 rounded-lg hover:bg-slate-800/50 cursor-pointer">
-                  <Video className="w-4.5 h-4.5" />
-                </button>
-                <button
-                  onClick={() => setShowOptions(!showOptions)}
-                  className="p-2 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-800/50 cursor-pointer"
-                >
-                  <MoreVertical className="w-4.5 h-4.5" />
-                </button>
-
-                {showOptions && (
-                  <div className="absolute right-0 top-12 w-48 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-30">
-                    <button
-                      onClick={() => {
-                        setShowOptions(false);
-                        handleUnmatch();
-                      }}
-                      className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-colors"
-                    >
-                      Unmatch profile
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Active chat header */}
+            <ChatHeader
+              partner={activeMatch.partner}
+              isOnline={isPartnerOnline(activeMatch.partner._id)}
+              onBack={() => {
+                setActiveMatch(null);
+                navigate('/chat');
+              }}
+              onUnmatch={handleUnmatch}
+            />
 
             {/* Historical Messages stream feed */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col">
-              {messages.map((msg) => {
-                const mine = msg.sender === currentUser._id;
-                return (
-                  <div
-                    key={msg._id}
-                    className={`flex flex-col max-w-[70%] text-left ${
-                      mine ? 'self-end items-end' : 'self-start items-start'
-                    }`}
-                  >
-                    <div
-                      className={`px-4 py-3 rounded-2xl shadow-md ${
-                        mine
-                          ? 'bg-rose-500 text-white rounded-tr-none'
-                          : 'bg-slate-900 text-slate-100 rounded-tl-none border border-slate-800/80'
-                      }`}
-                    >
-                      {/* Image render helper */}
-                      {msg.image && (
-                        <img
-                          src={msg.image.startsWith('/uploads') ? `http://localhost:5000${msg.image}` : msg.image}
-                          alt="Message Attachment"
-                          className="rounded-xl max-w-full h-auto mb-2 border border-slate-950"
-                        />
-                      )}
-                      <p className="text-sm leading-relaxed">{msg.text}</p>
-                    </div>
+              {messages.map((msg) => (
+                <MessageBubble
+                  key={msg._id}
+                  message={msg}
+                  isMine={msg.sender === currentUser._id}
+                />
+              ))}
 
-                    {/* Timestamp & read receipts footer */}
-                    <div className="flex items-center gap-1.5 mt-1.5 px-1">
-                      <span className="text-[9px] text-slate-500 font-medium">
-                        {new Date(msg.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                      {mine && (
-                        <span className={`text-[9px] font-bold ${
-                          msg.seen ? 'text-rose-500' : 'text-slate-600'
-                        }`}>
-                          {msg.seen ? 'Seen' : 'Sent'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Typing Dot bubble */}
+              {/* Typing Indicator */}
               {partnerTyping && (
-                <div className="flex flex-col self-start items-start max-w-[70%] text-left animate-pulse">
-                  <div className="px-4 py-3 rounded-2xl bg-slate-900 text-slate-400 rounded-tl-none border border-slate-850 typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
+                <TypingIndicator partnerName={activeMatch.partner?.name} />
               )}
               
               <div ref={messagesEndRef} />
@@ -468,7 +374,9 @@ const ChatPage = () => {
         ) : (
           <div className="flex flex-col items-center justify-center p-8 select-none text-center">
             <div className="w-14 h-14 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center text-rose-500 mb-4">
-              <MessageSquareIcon className="w-7 h-7" />
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
             </div>
             <h3 className="font-bold text-slate-200">No Chat Selected</h3>
             <p className="text-slate-500 text-xs mt-2 max-w-[200px] leading-relaxed">
@@ -481,20 +389,5 @@ const ChatPage = () => {
     </div>
   );
 };
-
-// Lucide custom icon alias
-const MessageSquareIcon = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
 
 export default ChatPage;

@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Flame, MessageCircle, User, LogOut } from 'lucide-react';
+import NotificationPanel from '../ui/NotificationPanel';
 
 const Shell = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -38,16 +40,21 @@ const Shell = ({ children }) => {
       <aside className="hidden md:flex flex-col w-80 bg-slate-900 border-r border-slate-800 shadow-2xl z-20">
         
         {/* User Account Info Header */}
-        <div className="flex items-center gap-3 p-6 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
+        <div className="flex items-center gap-3 p-5 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md">
           <img
             src={getProfilePhoto()}
             alt="Profile Avatar"
-            className="w-12 h-12 rounded-full border-2 border-rose-500 object-cover shadow-lg"
+            className="w-11 h-11 rounded-full border-2 border-rose-500 object-cover shadow-lg flex-shrink-0"
           />
-          <div className="flex flex-col min-w-0">
-            <h3 className="font-semibold text-slate-100 truncate">{user?.name}</h3>
+          <div className="flex flex-col min-w-0 flex-1">
+            <h3 className="font-semibold text-slate-100 truncate text-sm">{user?.name}</h3>
             <span className="text-xs text-slate-400 capitalize">{user?.gender}, {user?.age} yrs</span>
           </div>
+          {/* Notification Bell — desktop */}
+          <NotificationPanel
+            isOpen={notifOpen}
+            onToggle={() => setNotifOpen((prev) => !prev)}
+          />
         </div>
 
         {/* Sidebar Nav Links */}
@@ -91,27 +98,35 @@ const Shell = ({ children }) => {
       </main>
 
       {/* 3. Responsive Mobile Bottom Bar */}
-      <nav className="md:hidden h-16 bg-slate-900 border-t border-slate-800/80 flex items-center justify-around px-4 shadow-lg z-30">
+      <nav className="md:hidden h-16 bg-slate-900 border-t border-slate-800/80 flex items-center justify-around px-2 shadow-lg z-30">
         {navLinks.map(({ path, label, icon: Icon }) => {
           const isActive = location.pathname === path;
           return (
             <Link
               key={path}
               to={path}
-              className={`flex flex-col items-center justify-center w-16 h-12 rounded-lg transition-all duration-300 ${
+              className={`flex flex-col items-center justify-center w-14 h-12 rounded-lg transition-all duration-300 ${
                 isActive ? 'text-rose-500 scale-110' : 'text-slate-400'
               }`}
             >
-              <Icon className="w-6 h-6" />
+              <Icon className="w-5 h-5" />
               <span className="text-[10px] font-semibold mt-1">{label}</span>
             </Link>
           );
         })}
+        {/* Notification Bell — mobile */}
+        <div className="flex flex-col items-center justify-center w-14 h-12">
+          <NotificationPanel
+            isOpen={notifOpen}
+            onToggle={() => setNotifOpen((prev) => !prev)}
+          />
+          <span className="text-[10px] font-semibold mt-1 text-slate-400">Alerts</span>
+        </div>
         <button
           onClick={handleLogout}
-          className="flex flex-col items-center justify-center w-16 h-12 rounded-lg text-slate-400 hover:text-rose-400 cursor-pointer"
+          className="flex flex-col items-center justify-center w-14 h-12 rounded-lg text-slate-400 hover:text-rose-400 cursor-pointer"
         >
-          <LogOut className="w-6 h-6" />
+          <LogOut className="w-5 h-5" />
           <span className="text-[10px] font-semibold mt-1">Logout</span>
         </button>
       </nav>

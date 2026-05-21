@@ -30,3 +30,10 @@ Thumbs.db
 *.ntvsca*
 *.njsproj
 *.sln
+
+# Firebase cache
+.firebase/
+
+# User uploads
+backend/uploads/
+

@@ -2,7 +2,6 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AuthPage from '../pages/AuthPage';
-import { AuthProvider } from '../context/AuthContext';
 
 // Mock useNavigate from react-router-dom
 const mockNavigate = vi.fn();
@@ -13,6 +12,10 @@ vi.mock('react-router-dom', () => ({
 // Mock useAuth from AuthContext
 const mockLogin = vi.fn();
 const mockRegister = vi.fn();
+const mockLoginWithGoogle = vi.fn();
+const mockRegisterWithFirebaseEmail = vi.fn();
+const mockLoginWithFirebaseEmail = vi.fn();
+const mockSendFirebaseEmailLink = vi.fn();
 const mockSetError = vi.fn();
 let mockAuthError = null;
 
@@ -23,6 +26,10 @@ vi.mock('../context/AuthContext', async (importOriginal) => {
     useAuth: () => ({
       login: mockLogin,
       register: mockRegister,
+      loginWithGoogle: mockLoginWithGoogle,
+      registerWithFirebaseEmail: mockRegisterWithFirebaseEmail,
+      loginWithFirebaseEmail: mockLoginWithFirebaseEmail,
+      sendFirebaseEmailLink: mockSendFirebaseEmailLink,
       error: mockAuthError,
       setError: mockSetError,
     }),
@@ -69,7 +76,7 @@ describe('AuthPage Component Unit & Interactive Tests', () => {
   });
 
   it('should invoke login handler with input values on login submit', async () => {
-    mockLogin.mockResolvedValue({ success: true });
+    mockLoginWithFirebaseEmail.mockResolvedValue({ success: true });
     render(<AuthPage />);
 
     const emailInput = screen.getByPlaceholderText('e.g. john@gmail.com');
@@ -84,7 +91,7 @@ describe('AuthPage Component Unit & Interactive Tests', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith('john@example.com', 'secretpassword123');
+      expect(mockLoginWithFirebaseEmail).toHaveBeenCalledWith('john@example.com', 'secretpassword123');
       expect(mockNavigate).toHaveBeenCalledWith('/');
     });
   });
@@ -97,7 +104,7 @@ describe('AuthPage Component Unit & Interactive Tests', () => {
   });
 
   it('should invoke register handler with full form payload on registration submit', async () => {
-    mockRegister.mockResolvedValue({ success: true });
+    mockRegisterWithFirebaseEmail.mockResolvedValue({ success: true });
     render(<AuthPage />);
 
     // Switch to Register Form
@@ -122,17 +129,57 @@ describe('AuthPage Component Unit & Interactive Tests', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith({
-        name: 'Jane Doe',
-        age: 24,
-        location: 'Paris',
-        gender: 'male', // default value
-        preference: 'female', // default value
-        email: 'jane@example.com',
-        password: 'securepassword123',
-        bio: ''
-      });
+      expect(mockRegisterWithFirebaseEmail).toHaveBeenCalledWith(
+        'jane@example.com',
+        'securepassword123',
+        {
+          name: 'Jane Doe',
+          age: 24,
+          location: 'Paris',
+          gender: 'male', // default value
+          preference: 'female', // default value
+          bio: ''
+        }
+      );
       expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  it('should invoke Google sign-in handler on button click', async () => {
+    mockLoginWithGoogle.mockResolvedValue({ success: true });
+    render(<AuthPage />);
+
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' });
+    fireEvent.click(googleButton);
+
+    await waitFor(() => {
+      expect(mockLoginWithGoogle).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  it('should invoke sendFirebaseEmailLink handler on magic-link mode submit', async () => {
+    mockSendFirebaseEmailLink.mockResolvedValue({ success: true });
+    render(<AuthPage />);
+
+    // Switch to Magic Link Mode
+    const magicLinkTab = screen.getByRole('button', { name: 'Magic Link' });
+    fireEvent.click(magicLinkTab);
+
+    // Confirm only Email field and info description is shown
+    expect(screen.queryByPlaceholderText('At least 6 chars')).not.toBeInTheDocument();
+    expect(screen.getByText(/We'll send a secure, passwordless magic link/)).toBeInTheDocument();
+
+    const emailInput = screen.getByPlaceholderText('e.g. john@gmail.com');
+    const submitButton = screen.getByRole('button', { name: 'Send Magic Link' });
+
+    // Type email
+    fireEvent.change(emailInput, { target: { value: 'magic@example.com' } });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockSendFirebaseEmailLink).toHaveBeenCalledWith('magic@example.com');
+      expect(screen.getByText(/Magic link sent to/)).toBeInTheDocument();
     });
   });
 });

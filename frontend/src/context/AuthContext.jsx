@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import API, { setAccessToken, getAccessToken } from '../api/client';
-import { signInWithPopup } from 'firebase/auth';
+import {
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
+} from 'firebase/auth';
 import { auth, googleProvider } from '../api/firebase';
 
 const AuthContext = createContext(null);
@@ -196,31 +203,156 @@ export const AuthProvider = ({ children }) => {
     try {
       let idToken;
       if (auth && googleProvider) {
-        // Active Firebase Client SDK configuration
         const result = await signInWithPopup(auth, googleProvider);
         idToken = await result.user.getIdToken();
       } else {
-        // Simulated zero-config developer sandbox token logic
         console.warn('Firebase Config missing: executing Simulated Auth Mode.');
-        // We will generate a mock token string representing a sandbox user
         idToken = JSON.stringify({
           email: 'alex@example.com',
           name: 'Alex Sandbox',
           picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80'
         });
-        // Introduce a slight premium loading delay to simulate Firebase popup response
         await new Promise(resolve => setTimeout(resolve, 800));
       }
 
-      // Post verification request to our unified MERN backend
       const res = await API.post('/auth/firebase', { idToken });
       const { user: userRecord, accessToken } = res.data;
-
       setAccessToken(accessToken);
       setUser(userRecord);
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Google Authentication failed';
+      // User closed the Google popup — silently ignore
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setLoading(false);
+        return { success: false, error: null };
+      }
+      // Backend unreachable
+      const isNetworkError = !err.response && err.message === 'Network Error';
+      const msg = isNetworkError
+        ? 'Cannot reach the server. Make sure the backend is running on port 5000.'
+        : err.response?.data?.message || err.message || 'Google Authentication failed';
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 12. Firebase Email/Password Registration
+  const registerWithFirebaseEmail = async (email, password, profileData = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let idToken;
+      if (auth) {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        idToken = await result.user.getIdToken();
+      } else {
+        console.warn('Firebase Config missing: simulating email/password registration.');
+        idToken = JSON.stringify({ email, name: profileData.name || email.split('@')[0] });
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      const res = await API.post('/auth/firebase', { idToken, ...profileData });
+      const { user: userRecord, accessToken } = res.data;
+      setAccessToken(accessToken);
+      setUser(userRecord);
+      return { success: true };
+    } catch (err) {
+      const msg = err.code === 'auth/email-already-in-use'
+        ? 'This email is already registered. Try logging in instead.'
+        : err.code === 'auth/weak-password'
+          ? 'Password is too weak. Please use at least 6 characters.'
+          : err.response?.data?.message || err.message || 'Firebase registration failed';
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 13. Firebase Email/Password Login
+  const loginWithFirebaseEmail = async (email, password) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let idToken;
+      if (auth) {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        idToken = await result.user.getIdToken();
+      } else {
+        console.warn('Firebase Config missing: simulating email/password login.');
+        idToken = JSON.stringify({ email, name: email.split('@')[0] });
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      const res = await API.post('/auth/firebase', { idToken });
+      const { user: userRecord, accessToken } = res.data;
+      setAccessToken(accessToken);
+      setUser(userRecord);
+      return { success: true };
+    } catch (err) {
+      const isNetworkError = !err.response && err.message === 'Network Error';
+      const msg = isNetworkError
+        ? 'Cannot reach the server. Make sure the backend is running on port 5000.'
+        : err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
+          ? 'Invalid email or password.'
+          : err.response?.data?.message || err.message || 'Firebase login failed';
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 14. Send Firebase Email Sign-In Link (Passwordless)
+  const sendFirebaseEmailLink = async (email) => {
+    setError(null);
+    try {
+      if (auth) {
+        const actionCodeSettings = {
+          url: `${window.location.origin}/confirm-email-login`,
+          handleCodeInApp: true
+        };
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', email);
+      } else {
+        console.warn('Firebase Config missing: simulating email link send.');
+        window.localStorage.setItem('emailForSignIn', email);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      return { success: true };
+    } catch (err) {
+      const msg = err.message || 'Failed to send sign-in link';
+      setError(msg);
+      return { success: false, error: msg };
+    }
+  };
+
+  // 15. Complete Firebase Email Link Sign-In
+  const completeFirebaseEmailLink = async (email, url) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let idToken;
+      if (auth) {
+        const result = await signInWithEmailLink(auth, email, url);
+        window.localStorage.removeItem('emailForSignIn');
+        idToken = await result.user.getIdToken();
+      } else {
+        console.warn('Firebase Config missing: simulating email link completion.');
+        window.localStorage.removeItem('emailForSignIn');
+        idToken = JSON.stringify({ email, name: email.split('@')[0] });
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      const res = await API.post('/auth/firebase', { idToken });
+      const { user: userRecord, accessToken } = res.data;
+      setAccessToken(accessToken);
+      setUser(userRecord);
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Email link sign-in failed';
       setError(msg);
       return { success: false, error: msg };
     } finally {
@@ -235,6 +367,11 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     loginWithGoogle,
+    registerWithFirebaseEmail,
+    loginWithFirebaseEmail,
+    sendFirebaseEmailLink,
+    completeFirebaseEmailLink,
+    loadUser,
     logout,
     updateProfile,
     addPhoto,
@@ -255,4 +392,3 @@ export const useAuth = () => {
   }
   return context;
 };
-export default AuthContext;

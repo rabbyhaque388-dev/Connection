@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Trash2, Plus, Check, MapPin, Sparkles, X, Lock, UserX, ShieldAlert } from 'lucide-react';
+import { Plus, Check, MapPin, Sparkles, Lock, UserX, ShieldAlert } from 'lucide-react';
+import PhotoGrid from '../components/profile/PhotoGrid';
+import InterestTag from '../components/profile/InterestTag';
 
 const ProfilePage = () => {
   const { 
@@ -59,11 +61,9 @@ const ProfilePage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 1. Photo Uploader logic
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
+  // 1. Photo Uploader logic — accepts a File object directly (for PhotoGrid)
+  const handlePhotoUpload = async (file) => {
     if (!file) return;
-
     setUploading(true);
     try {
       await addPhoto(file);
@@ -228,50 +228,13 @@ const ProfilePage = () => {
               Profile Photos (Max 6)
             </h3>
 
-            {/* Grid Container */}
-            <div className="grid grid-cols-3 gap-3">
-              {/* Existing User Photos */}
-              {user?.photos?.map((photo) => (
-                <div
-                  key={photo._id}
-                  className="relative aspect-square rounded-2xl overflow-hidden border border-slate-800/80 group shadow-md"
-                >
-                  <img
-                    src={renderPhoto(photo)}
-                    alt="User Upload"
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Delete Overlay */}
-                  <button
-                    onClick={() => handlePhotoDelete(photo._id)}
-                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-500 transition-all duration-300 cursor-pointer"
-                  >
-                    <Trash2 className="w-6 h-6 animate-pulse" />
-                  </button>
-                </div>
-              ))}
-
-              {/* Upload Box slot (if total photos < 6) */}
-              {(!user?.photos || user.photos.length < 6) && (
-                <label className="relative aspect-square border-2 border-dashed border-slate-800 hover:border-rose-500 rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-rose-500 bg-slate-950 hover:bg-slate-900/50 cursor-pointer transition-all duration-300">
-                  {uploading ? (
-                    <span className="w-6 h-6 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin"></span>
-                  ) : (
-                    <>
-                      <Plus className="w-6 h-6 stroke-[3px]" />
-                      <span className="text-[10px] font-bold uppercase mt-1">Add Photo</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={uploading}
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
-              )}
-            </div>
+            <PhotoGrid
+              photos={user?.photos || []}
+              uploading={uploading}
+              onUpload={handlePhotoUpload}
+              onDelete={handlePhotoDelete}
+              maxPhotos={6}
+            />
             
             <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-4">
               Add up to 6 high-quality photos. The first image listed in the grid will be set as your primary search card cover!
@@ -516,14 +479,11 @@ const ProfilePage = () => {
 
               <div className="flex flex-wrap gap-2 min-h-[36px]">
                 {interests.map((interest) => (
-                  <span
+                  <InterestTag
                     key={interest}
-                    onClick={() => handleRemoveInterest(interest)}
-                    className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/20 hover:border-rose-500 text-xs font-bold text-rose-400 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-300"
-                  >
-                    #{interest}
-                    <X className="w-3.5 h-3.5 stroke-[2.5px]" />
-                  </span>
+                    label={`#${interest}`}
+                    onRemove={() => handleRemoveInterest(interest)}
+                  />
                 ))}
                 {interests.length === 0 && (
                   <span className="text-xs text-slate-600 font-semibold self-center">
